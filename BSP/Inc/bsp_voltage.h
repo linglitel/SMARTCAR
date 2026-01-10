@@ -29,7 +29,7 @@ void Motor_Voltage_Init(Motor_Voltage_t *motor, ADC_HandleTypeDef *hadc, volatil
 
 void Motor_Voltage_Enable(Motor_Voltage_t *motor);
 
-void Motor_Current_Calculate(Motor_Voltage_t *motor);
+void Motor_Voltage_Calculate(Motor_Voltage_t *motor);
 
 void Motor_Voltage_Update(Motor_Voltage_t *motor);
 
