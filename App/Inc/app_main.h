@@ -11,4 +11,6 @@ void app_init();
 
 void app_main();
 
+void App_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+
 #endif //SMARTCAR_APP_MAIN_H

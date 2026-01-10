@@ -95,7 +95,7 @@ void app_main() {
     system_ready = 1;
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+void App_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (!system_ready) {
         return;
     }

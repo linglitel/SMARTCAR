@@ -1604,7 +1604,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         HAL_IncTick();
     }
     /* USER CODE BEGIN Callback 1 */
-
+    App_TIM_PeriodElapsedCallback(htim);
     /* USER CODE END Callback 1 */
 }
 
