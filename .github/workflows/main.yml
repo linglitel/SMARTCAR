@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Install dependencies
         run: |
@@ -28,7 +28,7 @@ jobs:
         run: cmake --build build -- -j$(nproc)
 
       - name: Upload firmware artifact (.elf)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: firmware
           path: build/SMARTCAR.elf
