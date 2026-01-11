@@ -6,14 +6,22 @@
 
 #include "bsp_motor.h"
 
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim5;
+extern TIM_HandleTypeDef htim7;
+extern TIM_HandleTypeDef htim8;
+extern TIM_HandleTypeDef htim20;
 
 void Motor_Controller_Init(Motor_Controller_t *motor, TIM_HandleTypeDef *htim, uint32_t channel1, uint32_t channel2,
                            TIM_HandleTypeDef *htim_enc, float s_kp, float s_ki, float s_kd, float s_ol, float s_il,
-                           float p_kp, float p_ki, float p_kd, float p_ol, float p_dz) {
+                           float p_kp, float p_ki, float p_kd, float p_ol, float tolerance) {
     motor->htim = htim;
     motor->channel_1 = channel1;
     motor->channel_2 = channel2;
-    motor->htim_enc = htim_enc;  //todo 拆分编码器优化结构
+    motor->htim_enc = htim_enc; //todo 拆分编码器优化结构
     motor->total_count = 0;
     motor->current_speed = 0;
     motor->last_enc_cnt = 0;
@@ -33,10 +41,10 @@ void Motor_Controller_Init(Motor_Controller_t *motor, TIM_HandleTypeDef *htim, u
     motor->pid_pos.Ki = p_ki; // 位置环通常不用 I，除非要抵抗重力
     motor->pid_pos.Kd = p_kd;
     motor->pid_pos.output_limit = p_ol; // 这个limit其实限制的是“最大理论请求速度”
-    motor->pid_pos.dead_zone = p_dz; // 允许 5个脉冲的定位误差
+    motor->tolerance = tolerance; // 允许 5个脉冲的定位误差
 }
 
-void Motor_Controller_Isr(Motor_Controller_t *motor) {
+void Motor_Controller_ISR(Motor_Controller_t *motor) { //todo 移动到chassis
     // --- Step 1: 读取编码器反馈 (速度 & 位置) ---
     uint16_t enc_now = __HAL_TIM_GET_COUNTER(motor->htim_enc);
 
@@ -51,7 +59,7 @@ void Motor_Controller_Isr(Motor_Controller_t *motor) {
 
 
     // --- Step 2: 运行 PID ---
-    float speed_ref = 0.0f; // 最终给速度环的参考值
+    int32_t speed_ref = 0.0f; // 最终给速度环的参考值
 
     switch (motor->mode) {
         case CTRL_MODE_STOP:
@@ -63,17 +71,19 @@ void Motor_Controller_Isr(Motor_Controller_t *motor) {
 
         case CTRL_MODE_SPEED:
             // 纯速度模式：直接使用设定的目标速度
+            motor->state = MOTOR_STATE_BUSY;
             speed_ref = motor->target_speed;
 
             // 运行内环 (速度环)
-            motor->pwm_out = PID_Calculate(&motor->pid_speed, speed_ref, (float) motor->current_speed);
+            motor->pwm_out = PID_Calculate(&motor->pid_speed, (float) speed_ref, motor->current_speed);
             break;
 
         case CTRL_MODE_POSITION:
             // 位置模式 (串级 PID)
 
-            float pos_error = motor->target_position - (float) motor->total_count;
-            if (fabsf(pos_error) <= motor->pid_pos.dead_zone) {
+            float pos_error = fabsl(motor->target_position - motor->total_count);
+            if (pos_error <= motor->tolerance) {
+                motor->state = MOTOR_STATE_IDLE;
                 speed_ref = 0.0f;
                 motor->pwm_out = 0.0f;
 
@@ -81,6 +91,7 @@ void Motor_Controller_Isr(Motor_Controller_t *motor) {
                 motor->pid_speed.integral = 0.0f;
                 motor->pid_pos.integral = 0.0f;
             } else {
+                motor->state = MOTOR_STATE_BUSY;
                 // A. 外环 (位置环): 输入位置误差，输出期望速度
                 float desired_speed =
                         PID_Calculate(&motor->pid_pos, motor->target_position, (float) motor->total_count);
@@ -95,4 +106,25 @@ void Motor_Controller_Isr(Motor_Controller_t *motor) {
             }
     }
     Motor_Set_PWM(motor->htim, motor->channel_1, motor->channel_2, motor->pwm_out);
+}
+
+void Motor_Controller_Move_Forward(Motor_Controller_t *motor, Control_Mode_t mode, int32_t target_position,
+                                   int32_t target_speed) {
+    motor->mode = mode;
+    motor->state = MOTOR_STATE_BUSY;
+    motor->target_position = target_position + motor->total_count;
+    motor->pid_pos.error_prev = 0.0f;
+    motor->target_speed = target_speed;
+    motor->max_speed_in_pos_mode = target_speed;
+}
+
+void Motor_Controller_Stop() {
+    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
+    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_2);
+    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_3);
+    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_4);
+    HAL_TIM_PWM_Stop(&htim8,TIM_CHANNEL_1);
+    HAL_TIM_PWM_Stop(&htim8,TIM_CHANNEL_2);
+    HAL_TIM_PWM_Stop(&htim8,TIM_CHANNEL_3);
+    HAL_TIM_PWM_Stop(&htim8,TIM_CHANNEL_4);
 }

@@ -19,8 +19,6 @@ typedef struct {
 
     float output_limit; // 输出限幅 (例如 PWM 最大 4250)
     float integral_limit; // 积分限幅 (防积分饱和)
-
-    float dead_zone; // 死区 (小于此误差不动作，防抖动)
 } PID_Config_t;
 
 float PID_Calculate(PID_Config_t *pid, float target, float current);

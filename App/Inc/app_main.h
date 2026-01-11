@@ -7,9 +7,9 @@
 
 #include "main.h"
 
-void app_init();
+void App_Init();
 
-void app_main();
+void App_Main();
 
 void App_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 

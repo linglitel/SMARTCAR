@@ -8,6 +8,7 @@
 #include "bsp_current.h"
 #include "bsp_temp.h"
 #include "bsp_voltage.h"
+#include "bsp_imu.h"
 
 volatile uint16_t adc1_dma_buffer[5];
 volatile uint16_t adc3_dma_buffer[4];
@@ -43,9 +44,11 @@ extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim8;
 extern TIM_HandleTypeDef htim20;
 
+extern IMU_Data_t IMU_Data;
+
 static uint8_t task_divider = 0;
 
-void app_init() {
+void App_Init() {
     HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
     HAL_Delay(100);
     HAL_ADCEx_Calibration_Start(&hadc3, ADC_SINGLE_ENDED);
@@ -72,7 +75,7 @@ void app_init() {
     system_init = 1;
 }
 
-void app_main() {
+void App_Main() {
     if (!system_init) {
         Error_Handler();
     }
@@ -107,10 +110,10 @@ void App_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         Motor_Current_Update(&Motor_Current_3);
         Motor_Current_Update(&Motor_Current_4);
 
-        Motor_Controller_Isr(&Motor_Controller_1);
-        Motor_Controller_Isr(&Motor_Controller_2);
-        Motor_Controller_Isr(&Motor_Controller_3);
-        Motor_Controller_Isr(&Motor_Controller_4);
+        Motor_Controller_ISR(&Motor_Controller_1);
+        Motor_Controller_ISR(&Motor_Controller_2);
+        Motor_Controller_ISR(&Motor_Controller_3);
+        Motor_Controller_ISR(&Motor_Controller_4);
 
         // --- 2. 低频任务：电压和温度 (每10次中断做一次，即100ms/10Hz) ---
         // 电压和温度变化很慢，不需要每毫秒都算，省CPU资源
